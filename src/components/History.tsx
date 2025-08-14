@@ -2,55 +2,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Search,
-  Filter,
-  Download,
-  Calendar,
-  Users,
-  Receipt,
-  CheckCircle,
-  Clock,
-  Trash2,
-  Edit,
-  Eye,
-  MoreVertical,
-  ArrowUpDown,
-  X,
-  Plus,
-  CalendarRange,
-  DollarSign,
-  User,
-  Tag,
-  FileText,
-  Share,
-  Copy,
-  Archive,
-  Star,
-  StarOff,
-  CreditCard,
-  MapPin,
-  Camera,
-  BarChart3,
-  TrendingUp,
-  TrendingDown,
-  Equal,
-  Percent,
-  Split,
-  ChevronDown,
-  ChevronUp,
-  RefreshCw,
-  Settings,
-  BookmarkPlus,
-  Bookmark,
-  SlidersHorizontal,
-  List,
-  Grid,
-  Timeline,
-  ExternalLink,
-  AlertTriangle,
-  Info
-} from 'lucide-react';
+import { Search, Filter, Download, Calendar, Users, Receipt, CheckCircle, Clock, Trash2, Edit, Eye, MoreVertical, ArrowUpDown, X, Plus, CalendarRange, DollarSign, User, Tag, FileText, Share, Copy, Archive, Star, StarOff, CreditCard, MapPin, Camera, BarChart3, TrendingUp, TrendingDown, Equal, Percent, Split, ChevronDown, ChevronUp, RefreshCw, Settings, BookmarkPlus, Bookmark, SlidersHorizontal, List, Grid, Baseline as Timeline, ExternalLink, AlertTriangle, Info } from 'lucide-react';
 
 import { useExpense, Expense, formatCurrency, generateId } from '../context/ExpenseContext';
 import LoadingSpinner from './common/LoadingSpinner';

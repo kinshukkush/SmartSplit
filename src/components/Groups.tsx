@@ -2,47 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Plus,
-  Users,
-  Edit,
-  Trash2,
-  UserPlus,
-  QrCode,
-  Search,
-  Filter,
-  MoreVertical,
-  Crown,
-  Settings,
-  TrendingUp,
-  Calendar,
-  DollarSign,
-  Eye,
-  Share,
-  Copy,
-  Mail,
-  MessageSquare,
-  Bell,
-  BellOff,
-  Star,
-  Archive,
-  Unarchive,
-  Download,
-  Upload,
-  Zap,
-  Target,
-  PieChart,
-  BarChart3,
-  Activity,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  ExternalLink,
-  ChevronRight,
-  UserMinus,
-  Shield,
-  Sparkles
-} from 'lucide-react';
+import { Plus, Users, Edit, Trash2, UserPlus, QrCode, Search, Filter, MoreVertical, Crown, Settings, TrendingUp, Calendar, DollarSign, Eye, Share, Copy, Mail, MessageSquare, Bell, BellOff, Star, Archive, Archive as Unarchive, Download, Upload, Zap, Target, PieChart, BarChart3, Activity, Clock, CheckCircle, AlertCircle, ExternalLink, ChevronRight, UserMinus, Shield, Sparkles } from 'lucide-react';
 
 import { useExpense, Group, User, generateId, formatCurrency } from '../context/ExpenseContext';
 import LoadingSpinner from './common/LoadingSpinner';
