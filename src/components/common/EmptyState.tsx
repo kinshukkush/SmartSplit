@@ -1,10 +1,11 @@
 // src/components/common/EmptyState.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
+import { LucideIcon } from 'lucide-react';
 import { useExpense } from '../../context/ExpenseContext';
 
 interface EmptyStateProps {
-  icon?: string;
+  icon?: string | LucideIcon;
   title: string;
   description: string;
   action?: {
@@ -17,15 +18,20 @@ interface EmptyStateProps {
     onClick: () => void;
     variant?: 'primary' | 'secondary' | 'outline';
   };
+  suggestions?: Array<{
+    label: string;
+    onClick: () => void;
+  }>;
   className?: string;
 }
 
 const EmptyState: React.FC<EmptyStateProps> = ({
-  icon = '📋',
+  icon,
   title,
   description,
   action,
   secondaryAction,
+  suggestions,
   className = ''
 }) => {
   const { state } = useExpense();
@@ -70,7 +76,17 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         transition={{ delay: 0.1 }}
         className="text-6xl mb-4"
       >
-        {icon}
+        {typeof icon === 'string' ? (
+          icon
+        ) : icon ? (
+          React.createElement(icon, { 
+            className: `w-16 h-16 mx-auto ${
+              state.settings.theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
+            }` 
+          })
+        ) : (
+          '📋'
+        )}
       </motion.div>
 
       {/* Title */}
@@ -122,6 +138,37 @@ const EmptyState: React.FC<EmptyStateProps> = ({
               {secondaryAction.label}
             </button>
           )}
+        </motion.div>
+      )}
+
+      {/* Suggestions */}
+      {suggestions && suggestions.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="mt-6"
+        >
+          <p className={`text-sm mb-3 ${
+            state.settings.theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+          }`}>
+            Quick suggestions:
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {suggestions.map((suggestion, index) => (
+              <button
+                key={index}
+                onClick={suggestion.onClick}
+                className={`px-3 py-1 text-sm rounded-full transition-colors ${
+                  state.settings.theme === 'dark'
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {suggestion.label}
+              </button>
+            ))}
+          </div>
         </motion.div>
       )}
     </motion.div>

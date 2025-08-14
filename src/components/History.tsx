@@ -55,14 +55,7 @@ import {
 import { useExpense, Expense, formatCurrency, generateId } from '../context/ExpenseContext';
 import LoadingSpinner from './common/LoadingSpinner';
 import EmptyState from './common/EmptyState';
-import ExpenseCard from './history/ExpenseCard';
-import ExpenseTimeline from './history/ExpenseTimeline';
-import BulkActionsBar from './history/BulkActionsBar';
-import FilterPanel from './history/FilterPanel';
-import ExportModal from './history/ExportModal';
-import ExpenseDetailsModal from './common/ExpenseDetailsModal';
-import ConfirmDialog from './common/ConfirmDialog';
-import DateRangePicker from './common/DateRangePicker';
+import ExpenseCard from './dashboard/ExpenseCard';
 import toast from 'react-hot-toast';
 
 interface FilterState {
@@ -126,19 +119,8 @@ const History: React.FC = () => {
   const [pageSize] = useState(20);
 
   // Confirmation dialogs
-  const [confirmDialog, setConfirmDialog] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    onConfirm: () => void;
-    type: 'danger' | 'warning' | 'info';
-  }>({
-    isOpen: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
-    type: 'info'
-  });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
   // Enhanced expense data with calculations
   const enhancedExpenses = useMemo(() => {
@@ -442,18 +424,18 @@ const History: React.FC = () => {
   }, [dispatch]);
 
   const handleDeleteExpense = useCallback((expense: Expense) => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Delete Expense',
-      message: `Are you sure you want to delete "${expense.title}"? This action cannot be undone.`,
-      onConfirm: () => {
-        dispatch({ type: 'DELETE_EXPENSE', payload: expense.id });
-        toast.success('Expense deleted successfully');
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-      },
-      type: 'danger'
-    });
+    setExpenseToDelete(expense);
+    setShowDeleteConfirm(true);
   }, [dispatch]);
+
+  const confirmDeleteExpense = () => {
+    if (expenseToDelete) {
+      dispatch({ type: 'DELETE_EXPENSE', payload: expenseToDelete.id });
+      toast.success('Expense deleted successfully');
+      setShowDeleteConfirm(false);
+      setExpenseToDelete(null);
+    }
+  };
 
     const handleEditExpense = useCallback((expense: Expense) => {
     navigate(`/expense/${expense.id}/edit`);
@@ -974,14 +956,36 @@ const History: React.FC = () => {
       {/* Bulk Actions Bar */}
       <AnimatePresence>
         {selectedExpenses.size > 0 && (
-          <BulkActionsBar
-            selectedCount={selectedExpenses.size}
-            onSettle={handleBulkSettle}
-            onDelete={handleBulkDelete}
-            onExport={() => setShowExportModal(true)}
-            onClear={() => setSelectedExpenses(new Set())}
-            isLoading={isLoading}
-          />
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="bg-purple-600 text-white p-4 rounded-lg mb-4"
+          >
+            <div className="flex items-center justify-between">
+              <span>{selectedExpenses.size} expense(s) selected</span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={handleBulkSettle}
+                  className="px-3 py-1 bg-green-500 hover:bg-green-600 rounded text-sm"
+                >
+                  Settle
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="px-3 py-1 bg-red-500 hover:bg-red-600 rounded text-sm"
+                >
+                  Delete
+                </button>
+                <button
+                  onClick={() => setSelectedExpenses(new Set())}
+                  className="px-3 py-1 bg-gray-500 hover:bg-gray-600 rounded text-sm"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -995,77 +999,42 @@ const History: React.FC = () => {
             animate="visible"
             exit="hidden"
           >
-            {viewMode === 'timeline' ? (
-              <ExpenseTimeline
-                expenses={paginatedExpenses}
-                selectedExpenses={selectedExpenses}
-                onToggleSelect={(expenseId) => {
-                  const newSelected = new Set(selectedExpenses);
-                  if (newSelected.has(expenseId)) {
-                    newSelected.delete(expenseId);
-                  } else {
-                    newSelected.add(expenseId);
-                  }
-                  setSelectedExpenses(newSelected);
-                }}
-                onExpenseAction={(expense, action) => {
-                  switch (action) {
-                    case 'view':
-                      handleViewExpenseDetails(expense);
-                      break;
-                    case 'edit':
-                      handleEditExpense(expense);
-                      break;
-                    case 'delete':
-                      handleDeleteExpense(expense);
-                      break;
-                    case 'settle':
-                      handleToggleSettle(expense);
-                      break;
-                    case 'duplicate':
-                      handleDuplicateExpense(expense);
-                      break;
-                  }
-                }}
-              />
-            ) : (
-              <div className={
-                viewMode === 'cards'
-                  ? 'grid grid-cols-1 lg:grid-cols-2 gap-6'
-                  : 'space-y-4'
-              }>
-                {paginatedExpenses.map((expense, index) => (
-                  <motion.div
-                    key={expense.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    transition={{ delay: index * 0.05 }}
-                  >
-                    <ExpenseCard
-                      expense={expense}
-                      viewMode={viewMode}
-                      isSelected={selectedExpenses.has(expense.id)}
-                      onToggleSelect={() => {
-                        const newSelected = new Set(selectedExpenses);
-                        if (newSelected.has(expense.id)) {
-                          newSelected.delete(expense.id);
-                        } else {
-                          newSelected.add(expense.id);
-                        }
-                        setSelectedExpenses(newSelected);
-                      }}
-                      onView={() => handleViewExpenseDetails(expense)}
-                      onEdit={() => handleEditExpense(expense)}
-                      onDelete={() => handleDeleteExpense(expense)}
-                      onToggleSettle={() => handleToggleSettle(expense)}
-                      onDuplicate={() => handleDuplicateExpense(expense)}
-                      currentUserId={state.currentUser?.id}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            )}
+            <div className={
+              viewMode === 'cards'
+                ? 'grid grid-cols-1 lg:grid-cols-2 gap-6'
+                : 'space-y-4'
+            }>
+              {paginatedExpenses.map((expense, index) => (
+                <motion.div
+                  key={expense.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <ExpenseCard
+                    expense={expense}
+                    viewMode={viewMode}
+                    isSelected={selectedExpenses.has(expense.id)}
+                    onToggleSelect={() => {
+                      const newSelected = new Set(selectedExpenses);
+                      if (newSelected.has(expense.id)) {
+                        newSelected.delete(expense.id);
+                      } else {
+                        newSelected.add(expense.id);
+                      }
+                      setSelectedExpenses(newSelected);
+                    }}
+                    onView={() => handleViewExpenseDetails(expense)}
+                    onEdit={() => handleEditExpense(expense)}
+                    onDelete={() => handleDeleteExpense(expense)}
+                    onToggleSettle={() => handleToggleSettle(expense)}
+                    onDuplicate={() => handleDuplicateExpense(expense)}
+                    currentUserId={state.currentUser?.id}
+                  />
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
         ) : (
           <motion.div
@@ -1129,69 +1098,101 @@ const History: React.FC = () => {
       {/* Filter Panel Sidebar */}
       <AnimatePresence>
         {showFilterPanel && (
-          <FilterPanel
-            filters={filters}
-            onUpdateFilters={updateFilters}
-            onClose={() => setShowFilterPanel(false)}
-            users={state.users}
-            groups={state.groups}
-            categories={state.categories}
-            expenses={enhancedExpenses}
-          />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50"
+            onClick={() => setShowFilterPanel(false)}
+          >
+            <motion.div
+              initial={{ x: 300 }}
+              animate={{ x: 0 }}
+              exit={{ x: 300 }}
+              className="fixed right-0 top-0 h-full w-80 bg-white dark:bg-gray-800 shadow-xl p-6 overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold">Filters</h3>
+                <button
+                  onClick={() => setShowFilterPanel(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Categories</label>
+                  <div className="space-y-2">
+                    {state.categories.map(category => (
+                      <label key={category.id} className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={filters.categories.includes(category.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              updateFilters({ categories: [...filters.categories, category.id] });
+                            } else {
+                              updateFilters({ categories: filters.categories.filter(c => c !== category.id) });
+                            }
+                          }}
+                          className="mr-2"
+                        />
+                        <span className="text-sm">{category.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 
       {/* Modals */}
       <AnimatePresence>
-        {/* Export Modal */}
-        {showExportModal && (
-          <ExportModal
-            isOpen={showExportModal}
-            onClose={() => setShowExportModal(false)}
-            expenses={selectedExpenses.size > 0 
-              ? filteredExpenses.filter(exp => selectedExpenses.has(exp.id))
-              : filteredExpenses
-            }
-            onExport={handleExport}
-          />
-        )}
-
-        {/* Expense Details Modal */}
-        {selectedExpense && (
-          <ExpenseDetailsModal
-            expense={selectedExpense}
-            isOpen={!!selectedExpense}
-            onClose={() => setSelectedExpense(null)}
-            onEdit={() => {
-              handleEditExpense(selectedExpense);
-              setSelectedExpense(null);
-            }}
-            onDelete={() => {
-              handleDeleteExpense(selectedExpense);
-              setSelectedExpense(null);
-            }}
-            onToggleSettle={() => {
-              handleToggleSettle(selectedExpense);
-              setSelectedExpense(null);
-            }}
-            onDuplicate={() => {
-              handleDuplicateExpense(selectedExpense);
-              setSelectedExpense(null);
-            }}
-            currentUserId={state.currentUser?.id}
-          />
-        )}
-
-        {/* Confirmation Dialog */}
-        {confirmDialog.isOpen && (
-          <ConfirmDialog
-            isOpen={confirmDialog.isOpen}
-            title={confirmDialog.title}
-            message={confirmDialog.message}
-            type={confirmDialog.type}
-            onConfirm={confirmDialog.onConfirm}
-            onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
-          />
+        {/* Delete Confirmation */}
+        {showDeleteConfirm && expenseToDelete && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+            onClick={() => setShowDeleteConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
+            >
+              <div className="text-center">
+                <div className="text-5xl mb-4">⚠️</div>
+                <h3 className="text-lg font-semibold mb-2">Delete Expense</h3>
+                <p className={`mb-6 ${state.settings.theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Are you sure you want to delete "{expenseToDelete.title}"? This action cannot be undone.
+                </p>
+                
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteExpense}
+                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
 

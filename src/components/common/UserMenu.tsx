@@ -2,37 +2,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { User, Settings, CreditCard, Download, HelpCircle, LogOut, ChevronDown } from 'lucide-react';
 import { useExpense, formatCurrency } from '../../context/ExpenseContext';
 import Avatar from './Avatar';
 
 interface UserMenuProps {
-  isOpen: boolean;
+  user: any;
   onClose: () => void;
-  onToggle: () => void;
 }
 
-const UserMenu: React.FC<UserMenuProps> = ({ isOpen, onClose, onToggle }) => {
+const UserMenu: React.FC<UserMenuProps> = ({ user, onClose }) => {
   const { state, dispatch } = useExpense();
   const navigate = useNavigate();
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  const currentUser = state.currentUser;
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen, onClose]);
 
   const handleThemeToggle = () => {
     const themes = ['light', 'dark', 'system'] as const;
@@ -76,28 +57,28 @@ const UserMenu: React.FC<UserMenuProps> = ({ isOpen, onClose, onToggle }) => {
       id: 'profile',
       title: 'Profile',
       description: 'View and edit your profile',
-      icon: '👤',
+      icon: User,
       action: () => navigate('/profile')
     },
     {
       id: 'settings',
       title: 'Settings',
       description: 'Manage app preferences',
-      icon: '⚙️',
+      icon: Settings,
       action: () => navigate('/settings')
     },
     {
       id: 'payment-methods',
       title: 'Payment Methods',
       description: 'Manage payment options',
-      icon: '💳',
+      icon: CreditCard,
       action: () => navigate('/payments')
     },
     {
       id: 'export-data',
       title: 'Export Data',
       description: 'Download your data',
-      icon: '📤',
+      icon: Download,
       action: () => {
         // TODO: Implement export functionality
         console.log('Export data');
@@ -107,7 +88,7 @@ const UserMenu: React.FC<UserMenuProps> = ({ isOpen, onClose, onToggle }) => {
       id: 'help',
       title: 'Help & Support',
       description: 'Get help and contact support',
-      icon: '❓',
+      icon: HelpCircle,
       action: () => {
         // TODO: Implement help functionality
         console.log('Help & Support');
@@ -115,16 +96,108 @@ const UserMenu: React.FC<UserMenuProps> = ({ isOpen, onClose, onToggle }) => {
     }
   ];
 
-  if (!currentUser) {
+  if (!user) {
     return null;
   }
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      {/* User Avatar Button */}
-      <button
-        onClick={onToggle}
-        className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+      className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50"
+    >
+      {/* User Info Header */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center space-x-3">
+          <Avatar
+            src={user.avatar}
+            name={user.name}
+            size="lg"
+          />
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              {user.name}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {user.email}
+            </p>
+            <div className="mt-2">
+              <span className="inline-block px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs font-medium">
+                Active
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Theme Toggle */}
+      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+        <button
+          onClick={handleThemeToggle}
+          className="w-full flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <span className="text-lg">{getThemeIcon()}</span>
+            <div className="text-left">
+              <div className="text-sm font-medium text-gray-900 dark:text-white">
+                Theme
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                {getThemeLabel()}
+              </div>
+            </div>
+          </div>
+          <ChevronDown className="w-4 h-4 text-gray-400" />
+        </button>
+      </div>
+
+      {/* Menu Items */}
+      <div className="py-2">
+        {menuItems.map((item) => {
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                item.action();
+                onClose();
+              }}
+              className="w-full flex items-center space-x-3 px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Icon className="w-5 h-5 text-gray-400" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                  {item.title}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {item.description}
+                </div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => {
+            // TODO: Implement logout functionality
+            console.log('Logout');
+            onClose();
+          }}
+          className="w-full flex items-center justify-center space-x-2 px-4 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
+export default UserMenu;
       >
         <Avatar
           src={currentUser.avatar}

@@ -47,13 +47,6 @@ import {
 import { useExpense, Group, User, generateId, formatCurrency } from '../context/ExpenseContext';
 import LoadingSpinner from './common/LoadingSpinner';
 import EmptyState from './common/EmptyState';
-import GroupCard from './groups/GroupCard';
-import CreateGroupModal from './groups/CreateGroupModal';
-import InviteMembersModal from './groups/InviteMembersModal';
-import GroupSettingsModal from './groups/GroupSettingsModal';
-import GroupAnalytics from './groups/GroupAnalytics';
-import QRCodeModal from './common/QRCodeModal';
-import ConfirmDialog from './common/ConfirmDialog';
 import toast from 'react-hot-toast';
 
 const Groups: React.FC = () => {
@@ -69,26 +62,10 @@ const Groups: React.FC = () => {
   
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showQRModal, setShowQRModal] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   
   // Confirmation dialogs
-  const [confirmDialog, setConfirmDialog] = useState<{
-    isOpen: boolean;
-    title: string;
-    message: string;
-    onConfirm: () => void;
-    type: 'danger' | 'warning' | 'info';
-  }>({
-    isOpen: false,
-    title: '',
-    message: '',
-    onConfirm: () => {},
-    type: 'info'
-  });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Loading states
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
@@ -235,24 +212,24 @@ const Groups: React.FC = () => {
   };
 
   const handleDeleteGroup = (group: Group) => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Delete Group',
-      message: `Are you sure you want to delete "${group.name}"? This action cannot be undone and will remove all associated data.`,
-      onConfirm: async () => {
-        setLoadingStates(prev => ({ ...prev, [`delete-${group.id}`]: true }));
-        try {
-          dispatch({ type: 'DELETE_GROUP', payload: group.id });
-          toast.success('Group deleted successfully');
-        } catch (error) {
-          toast.error('Failed to delete group');
-        } finally {
-          setLoadingStates(prev => ({ ...prev, [`delete-${group.id}`]: false }));
-          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        }
-      },
-      type: 'danger'
-    });
+    setSelectedGroup(group);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteGroup = async () => {
+    if (!selectedGroup) return;
+    
+    setLoadingStates(prev => ({ ...prev, [`delete-${selectedGroup.id}`]: true }));
+    try {
+      dispatch({ type: 'DELETE_GROUP', payload: selectedGroup.id });
+      toast.success('Group deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete group');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [`delete-${selectedGroup.id}`]: false }));
+      setShowDeleteConfirm(false);
+      setSelectedGroup(null);
+    }
   };
 
   const handleArchiveGroup = async (group: Group) => {
@@ -266,49 +243,6 @@ const Groups: React.FC = () => {
     } finally {
       setLoadingStates(prev => ({ ...prev, [`archive-${group.id}`]: false }));
     }
-  };
-
-  const handleInviteMembers = (group: Group) => {
-    setSelectedGroup(group);
-    setShowInviteModal(true);
-  };
-
-  const handleGenerateQR = (group: Group) => {
-    setSelectedGroup(group);
-    setShowQRModal(true);
-  };
-
-  const handleGroupSettings = (group: Group) => {
-    setSelectedGroup(group);
-    setShowSettingsModal(true);
-  };
-
-  const handleViewAnalytics = (group: Group) => {
-    setSelectedGroup(group);
-    setShowAnalytics(true);
-  };
-
-  const handleLeaveGroup = (group: Group) => {
-    if (!state.currentUser) return;
-
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Leave Group',
-      message: `Are you sure you want to leave "${group.name}"? You'll need to be re-invited to join again.`,
-      onConfirm: async () => {
-        try {
-          dispatch({ 
-            type: 'REMOVE_GROUP_MEMBER', 
-            payload: { groupId: group.id, userId: state.currentUser!.id } 
-          });
-          toast.success('Left group successfully');
-        } catch (error) {
-          toast.error('Failed to leave group');
-        }
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-      },
-      type: 'warning'
-    });
   };
 
   const containerVariants = {
@@ -598,22 +532,82 @@ const Groups: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ delay: index * 0.05 }}
+                className={`p-6 rounded-xl border transition-all duration-200 hover:scale-[1.02] ${
+                  state.settings.theme === 'dark'
+                    ? 'bg-gray-800/50 border-gray-700/50'
+                    : 'bg-white border-gray-200/50'
+                }`}
               >
-                <GroupCard
-                  group={group}
-                  viewMode={viewMode}
-                  onEdit={() => handleEditGroup(group)}
-                  onDelete={() => handleDeleteGroup(group)}
-                  onArchive={() => handleArchiveGroup(group)}
-                  onInvite={() => handleInviteMembers(group)}
-                  onQRCode={() => handleGenerateQR(group)}
-                  onSettings={() => handleGroupSettings(group)}
-                  onAnalytics={() => handleViewAnalytics(group)}
-                  onLeave={() => handleLeaveGroup(group)}
-                  onViewDetails={() => navigate(`/groups/${group.id}`)}
-                  isLoading={loadingStates[`delete-${group.id}`] || loadingStates[`archive-${group.id}`]}
-                  currentUserId={state.currentUser?.id}
-                />
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div 
+                      className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-medium"
+                      style={{ backgroundColor: group.color }}
+                    >
+                      👥
+                    </div>
+                    <div>
+                      <h3 className={`text-lg font-semibold ${
+                        state.settings.theme === 'dark' ? 'text-white' : 'text-gray-900'
+                      }`}>
+                        {group.name}
+                      </h3>
+                      <p className={`text-sm ${
+                        state.settings.theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                      }`}>
+                        {group.members.length} members
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleEditGroup(group)}
+                      className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteGroup(group)}
+                      className="p-2 text-red-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                
+                <p className={`text-sm mb-4 ${
+                  state.settings.theme === 'dark' ? 'text-gray-400' : 'text-gray-600'
+                }`}>
+                  {group.description}
+                </p>
+                
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-purple-600">
+                      {group.stats.totalExpenses}
+                    </div>
+                    <div className="text-xs text-gray-500">Expenses</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-green-600">
+                      {formatCurrency(group.stats.totalAmount, group.settings.defaultCurrency)}
+                    </div>
+                    <div className="text-xs text-gray-500">Total</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-blue-600">
+                      {group.stats.settlementRate.toFixed(0)}%
+                    </div>
+                    <div className="text-xs text-gray-500">Settled</div>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={() => navigate(`/groups/${group.id}`)}
+                  className="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
+                >
+                  View Details
+                </button>
               </motion.div>
             ))}
           </motion.div>
@@ -695,134 +689,46 @@ const Groups: React.FC = () => {
 
       {/* Modals */}
       <AnimatePresence>
-        {/* Create/Edit Group Modal */}
-        {showCreateModal && (
-          <CreateGroupModal
-            group={selectedGroup}
-            isOpen={showCreateModal}
-            onClose={() => {
-              setShowCreateModal(false);
-              setSelectedGroup(null);
-            }}
-            onSave={(groupData) => {
-              if (selectedGroup) {
-                const updatedGroup = { ...selectedGroup, ...groupData };
-                dispatch({ type: 'UPDATE_GROUP', payload: updatedGroup });
-                toast.success('Group updated successfully');
-              } else {
-                const newGroup: Group = {
-                  ...groupData,
-                  id: generateId('group'),
-                  createdAt: new Date().toISOString(),
-                  createdBy: state.currentUser?.id || '',
-                  isActive: true,
-                  totalExpenses: 0,
-                  totalAmount: 0,
-                  lastActivity: new Date().toISOString()
-                };
-                dispatch({ type: 'ADD_GROUP', payload: newGroup });
-                toast.success('Group created successfully');
-              }
-              setShowCreateModal(false);
-              setSelectedGroup(null);
-            }}
-          />
-        )}
-
-        {/* Invite Members Modal */}
-        {showInviteModal && selectedGroup && (
-          <InviteMembersModal
-            group={selectedGroup}
-            isOpen={showInviteModal}
-            onClose={() => {
-              setShowInviteModal(false);
-              setSelectedGroup(null);
-            }}
-            onInvite={(userIds, inviteMethod) => {
-              // Handle invite logic
-              userIds.forEach(userId => {
-                dispatch({
-                  type: 'ADD_GROUP_MEMBER',
-                  payload: { groupId: selectedGroup.id, userId }
-                });
-              });
-              toast.success(`Invited ${userIds.length} member(s) to ${selectedGroup.name}`);
-              setShowInviteModal(false);
-              setSelectedGroup(null);
-            }}
-          />
-        )}
-
-        {/* Group Settings Modal */}
-        {showSettingsModal && selectedGroup && (
-          <GroupSettingsModal
-            group={selectedGroup}
-            isOpen={showSettingsModal}
-            onClose={() => {
-              setShowSettingsModal(false);
-              setSelectedGroup(null);
-            }}
-            onSave={(settings) => {
-              const updatedGroup = { ...selectedGroup, settings };
-              dispatch({ type: 'UPDATE_GROUP', payload: updatedGroup });
-              toast.success('Group settings updated');
-              setShowSettingsModal(false);
-              setSelectedGroup(null);
-            }}
-          />
-        )}
-
-        {/* QR Code Modal */}
-        {showQRModal && selectedGroup && (
-          <QRCodeModal
-            isOpen={showQRModal}
-            onClose={() => {
-              setShowQRModal(false);
-              setSelectedGroup(null);
-            }}
-            title={`Join ${selectedGroup.name}`}
-            data={`${window.location.origin}/groups/join/${selectedGroup.id}`}
-            description="Share this QR code or link to invite people to your group"
-          />
-        )}
-
-        {/* Group Analytics Modal */}
-        {showAnalytics && (
+        {/* Delete Confirmation */}
+        {showDeleteConfirm && selectedGroup && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
-            onClick={() => setShowAnalytics(false)}
+            onClick={() => setShowDeleteConfirm(false)}
           >
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-6xl max-h-[90vh] overflow-hidden"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6"
             >
-              <GroupAnalytics
-                groups={selectedGroup ? [selectedGroup] : enhancedGroups.filter(g => g.isActive)}
-                onClose={() => {
-                  setShowAnalytics(false);
-                  setSelectedGroup(null);
-                }}
-              />
+              <div className="text-center">
+                <div className="text-5xl mb-4">⚠️</div>
+                <h3 className="text-lg font-semibold mb-2">Delete Group</h3>
+                <p className={`mb-6 ${state.settings.theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Are you sure you want to delete "{selectedGroup.name}"? This action cannot be undone.
+                </p>
+                
+                <div className="flex items-center space-x-3">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmDeleteGroup}
+                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </motion.div>
-        )}
-
-        {/* Confirmation Dialog */}
-        {confirmDialog.isOpen && (
-          <ConfirmDialog
-            isOpen={confirmDialog.isOpen}
-            title={confirmDialog.title}
-            message={confirmDialog.message}
-            type={confirmDialog.type}
-            onConfirm={confirmDialog.onConfirm}
-            onCancel={() => setConfirmDialog(prev => ({ ...prev, isOpen: false }))}
-          />
         )}
       </AnimatePresence>
 
@@ -881,7 +787,7 @@ const Groups: React.FC = () => {
                     <p className={`text-xs ${
                       state.settings.theme === 'dark' ? 'text-gray-400' : 'text-gray-500'
                     }`}>
-                      {new Date(activity.timestamp).toRelative()}
+                      {new Date(activity.timestamp).toLocaleDateString()}
                     </p>
                   </div>
                   {activity.metadata?.amount && (
