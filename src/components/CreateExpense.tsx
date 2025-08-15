@@ -703,4 +703,12 @@ const CreateExpense: React.FC = () => {
   );
 };
 
+// Helper function to format currency
+const formatCurrency = (amount: number, currency: string) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currency
+  }).format(amount);
+};
+
 export default CreateExpense;
