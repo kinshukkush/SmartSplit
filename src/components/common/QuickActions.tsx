@@ -1,19 +1,26 @@
+// src/components/common/QuickActions.tsx
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { 
   Plus, 
   Users, 
-  Calculator, 
   Receipt, 
   CreditCard, 
   PieChart,
-  Clock,
-  Bell
+  Activity,
+  FileText,
+  Settings,
+  X
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { useExpense } from '../../context/ExpenseContext';
 
-const QuickActions: React.FC = () => {
+interface QuickActionsProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const QuickActions: React.FC<QuickActionsProps> = ({ isOpen, onClose }) => {
   const { state } = useExpense();
   const navigate = useNavigate();
 
@@ -21,108 +28,138 @@ const QuickActions: React.FC = () => {
     {
       id: 'add-expense',
       title: 'Add Expense',
-      description: 'Split a new bill',
+      description: 'Create new expense',
       icon: Plus,
       color: 'bg-purple-600 hover:bg-purple-700',
-      onClick: () => navigate('/create-expense')
+      onClick: () => {
+        navigate('/create');
+        onClose();
+      }
     },
     {
       id: 'create-group',
       title: 'Create Group',
-      description: 'Start a new group',
+      description: 'Start expense group',
       icon: Users,
       color: 'bg-blue-600 hover:bg-blue-700',
-      onClick: () => navigate('/create-group')
+      onClick: () => {
+        navigate('/groups/create');
+        onClose();
+      }
     },
     {
-      id: 'settle-up',
-      title: 'Settle Up',
-      description: 'Pay your debts',
-      icon: CreditCard,
+      id: 'view-history',
+      title: 'View History',
+      description: 'See all expenses',
+      icon: Receipt,
       color: 'bg-green-600 hover:bg-green-700',
-      onClick: () => navigate('/settlements')
+      onClick: () => {
+        navigate('/history');
+        onClose();
+      }
     },
     {
-      id: 'view-reports',
-      title: 'View Reports',
-      description: 'See spending insights',
-      icon: PieChart,
+      id: 'settlements',
+      title: 'Settlements',
+      description: 'Manage payments',
+      icon: CreditCard,
       color: 'bg-orange-600 hover:bg-orange-700',
-      onClick: () => navigate('/reports')
+      onClick: () => {
+        navigate('/settlements');
+        onClose();
+      }
+    },
+    {
+      id: 'reports',
+      title: 'Reports',
+      description: 'View analytics',
+      icon: PieChart,
+      color: 'bg-indigo-600 hover:bg-indigo-700',
+      onClick: () => {
+        navigate('/reports');
+        onClose();
+      }
+    },
+    {
+      id: 'activity',
+      title: 'Activity',
+      description: 'Recent updates',
+      icon: Activity,
+      color: 'bg-pink-600 hover:bg-pink-700',
+      onClick: () => {
+        navigate('/activity');
+        onClose();
+      }
     }
   ];
 
   return (
-    <div className={`p-6 rounded-lg ${
-      state.settings.theme === 'dark' ? 'bg-gray-800' : 'bg-white'
-    } shadow-sm`}>
-      <h3 className="text-lg font-semibold mb-4">Quick Actions</h3>
-      
-      <div className="grid grid-cols-2 gap-3">
-        {actions.map((action, index) => (
-          <motion.button
-            key={action.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.1 }}
-            onClick={action.onClick}
-            className={`${action.color} text-white p-4 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg`}
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          onClick={onClose}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className={`w-full max-w-md rounded-xl shadow-xl ${
+              state.settings.theme === 'dark'
+                ? 'bg-gray-800 border border-gray-700'
+                : 'bg-white border border-gray-200'
+            }`}
+            onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex flex-col items-center text-center space-y-2">
-              <action.icon className="w-6 h-6" />
-              <div>
-                <div className="font-medium text-sm">{action.title}</div>
-                <div className="text-xs opacity-90">{action.description}</div>
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className={`text-lg font-semibold ${
+                state.settings.theme === 'dark' ? 'text-white' : 'text-gray-900'
+              }`}>
+                Quick Actions
+              </h3>
+              <button
+                onClick={onClose}
+                className={`p-2 rounded-lg transition-colors ${
+                  state.settings.theme === 'dark'
+                    ? 'hover:bg-gray-700 text-gray-400 hover:text-white'
+                    : 'hover:bg-gray-100 text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Actions Grid */}
+            <div className="p-6">
+              <div className="grid grid-cols-2 gap-3">
+                {actions.map((action, index) => (
+                  <motion.button
+                    key={action.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    onClick={action.onClick}
+                    className={`${action.color} text-white p-4 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg`}
+                  >
+                    <div className="flex flex-col items-center text-center space-y-2">
+                      <action.icon className="w-6 h-6" />
+                      <div>
+                        <div className="font-medium text-sm">{action.title}</div>
+                        <div className="text-xs opacity-90">{action.description}</div>
+                      </div>
+                    </div>
+                  </motion.button>
+                ))}
               </div>
             </div>
-          </motion.button>
-        ))}
-      </div>
-
-      {/* Recent Activity Shortcut */}
-      <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <button
-          onClick={() => navigate('/history')}
-          className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
-            state.settings.theme === 'dark'
-              ? 'hover:bg-gray-700 text-gray-300'
-              : 'hover:bg-gray-50 text-gray-700'
-          }`}
-        >
-          <div className="flex items-center space-x-3">
-            <Clock className="w-4 h-4" />
-            <span className="text-sm font-medium">Recent Activity</span>
-          </div>
-          <div className={`text-xs px-2 py-1 rounded-full ${
-            state.settings.theme === 'dark'
-              ? 'bg-gray-700 text-gray-400'
-              : 'bg-gray-100 text-gray-600'
-          }`}>
-            {state.expenses.length}
-          </div>
-        </button>
-      </div>
-
-      {/* Notifications Shortcut */}
-      <div className="mt-2">
-        <button
-          onClick={() => navigate('/notifications')}
-          className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors ${
-            state.settings.theme === 'dark'
-              ? 'hover:bg-gray-700 text-gray-300'
-              : 'hover:bg-gray-50 text-gray-700'
-          }`}
-        >
-          <div className="flex items-center space-x-3">
-            <Bell className="w-4 h-4" />
-            <span className="text-sm font-medium">Notifications</span>
-          </div>
-          {state.notifications.filter(n => !n.read).length > 0 && (
-            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-          )}
-        </button>
-      </div>
-    </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };
 

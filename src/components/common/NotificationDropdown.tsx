@@ -1,13 +1,13 @@
 // src/components/common/NotificationDropdown.tsx
-import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Bell, X, Check, Clock, AlertCircle } from 'lucide-react';
-import { useExpense, formatCurrency } from '../../context/ExpenseContext';
+import { useExpense, formatCurrency, Reminder } from '../../context/ExpenseContext';
 import Avatar from './Avatar';
 
 interface NotificationDropdownProps {
-  notifications: any[];
+  notifications: Reminder[];
   onClose: () => void;
 }
 
